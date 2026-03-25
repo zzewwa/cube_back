@@ -65,6 +65,42 @@ python manage.py runserver
 
 Сервер запустится на `http://localhost:8000/`.
 
+## Запуск через Docker
+
+В репозитории есть `Dockerfile` и `docker-compose.yml`.
+
+Особенность: контейнер backend автоматически подтягивает фронтовые файлы из соседнего репозитория:
+
+- `../frontend_repo/templates/main` → `main/templates/main`
+- `../frontend_repo/static/main` → `main/static/main`
+
+То есть структура папок должна быть такой:
+
+```text
+my_cube_split/
+  frontend_repo/
+  backend_repo/
+```
+
+### Команды
+
+Из папки `backend_repo`:
+
+```bash
+docker compose up --build
+```
+
+После старта:
+
+- Django: `http://localhost:8000/`
+- PostgreSQL внутри compose: порт `5433` на хосте
+
+Остановка:
+
+```bash
+docker compose down
+```
+
 ## Текущая структура интерфейса
 
 ### Авторизация и регистрация
