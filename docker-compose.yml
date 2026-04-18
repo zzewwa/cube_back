@@ -37,7 +37,7 @@ services:
       - ./:/app
       - ../frontend_repo/templates/main:/app/main/templates/main:ro
       - ../frontend_repo/static/main:/app/main/static/main:ro
-    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    command: sh -c "python manage.py migrate && python manage.py collectstatic --noinput && python manage.py runserver 0.0.0.0:8000"
 
 volumes:
   postgres_data:
