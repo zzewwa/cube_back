@@ -27,6 +27,9 @@ jobs:
               SUDO=""
             fi
 
+            DEPLOY_USER="$(id -un)"
+            DEPLOY_GROUP="$(id -gn)"
+
             # Install required host tools if they are missing.
             if ! command -v git >/dev/null 2>&1 || ! command -v psql >/dev/null 2>&1; then
               if command -v apt-get >/dev/null 2>&1; then
@@ -93,7 +96,7 @@ jobs:
               true
             elif [ -n "$SUDO" ]; then
               $SUDO mkdir -p "$APP_DIR"
-              $SUDO chown "$USER":"$(id -gn)" "$APP_DIR"
+              $SUDO chown "$DEPLOY_USER":"$DEPLOY_GROUP" "$APP_DIR"
             else
               APP_DIR="$HOME/my_cube_split"
               mkdir -p "$APP_DIR"
@@ -111,7 +114,7 @@ jobs:
 
             if [ -n "$SUDO" ]; then
               $SUDO mkdir -p "$BACKEND_DIR" "$FRONTEND_DIR"
-              $SUDO chown -R "$USER":"$(id -gn)" "$BACKEND_DIR" "$FRONTEND_DIR" || true
+              $SUDO chown -R "$DEPLOY_USER":"$DEPLOY_GROUP" "$BACKEND_DIR" "$FRONTEND_DIR" || true
             fi
 
             sync_repo() {
@@ -120,7 +123,7 @@ jobs:
 
               cd "$REPO_DIR"
               if [ -n "$SUDO" ]; then
-                $SUDO chown -R "$USER":"$(id -gn)" "$REPO_DIR" || true
+                $SUDO chown -R "$DEPLOY_USER":"$DEPLOY_GROUP" "$REPO_DIR" || true
               fi
               git remote set-url origin "$REPO_URL"
               git fetch --prune origin
