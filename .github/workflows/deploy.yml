@@ -17,7 +17,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script_stop: true
           script: |
-            set -e
+            set -euo pipefail
 
             export DEBIAN_FRONTEND=noninteractive
 
@@ -109,11 +109,19 @@ jobs:
               git clone "$FRONTEND_REPO_URL" "$FRONTEND_DIR"
             fi
 
+            if [ -n "$SUDO" ]; then
+              $SUDO mkdir -p "$BACKEND_DIR" "$FRONTEND_DIR"
+              $SUDO chown -R "$USER":"$(id -gn)" "$BACKEND_DIR" "$FRONTEND_DIR" || true
+            fi
+
             sync_repo() {
               REPO_DIR="$1"
               REPO_URL="$2"
 
               cd "$REPO_DIR"
+              if [ -n "$SUDO" ]; then
+                $SUDO chown -R "$USER":"$(id -gn)" "$REPO_DIR" || true
+              fi
               git remote set-url origin "$REPO_URL"
               git fetch --prune origin
 
@@ -125,10 +133,10 @@ jobs:
 
               git merge --abort >/dev/null 2>&1 || true
               git rebase --abort >/dev/null 2>&1 || true
-              git reset --hard
+              git reset --hard HEAD >/dev/null 2>&1 || true
               git clean -fd
 
-              git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
+              git checkout -f "$TARGET_BRANCH" >/dev/null 2>&1 || git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
               git reset --hard "origin/$TARGET_BRANCH"
               git clean -fd
             }
