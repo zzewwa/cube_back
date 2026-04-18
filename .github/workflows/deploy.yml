@@ -1,4 +1,4 @@
-name: Deploy to Kubernetes
+name: Deploy Backend
 
 on:
   push:
@@ -8,7 +8,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v3
 
       - name: Set up kubectl
@@ -16,13 +16,16 @@ jobs:
         with:
           version: 'v1.32.0'
 
-      - name: Deploy to Yandex K8s
+      - name: Deploy
         run: |
           echo "${{ secrets.KUBE_CONFIG }}" > kubeconfig.yaml
           export KUBECONFIG=./kubeconfig.yaml
+
+          # Обновляем образ в манифесте
+          sed -i "s|ghcr.io/zzewwa/cube-back:latest|ghcr.io/zzewwa/cube-back:${{ github.sha }}|g" k8s/deployment.yaml
 
           kubectl apply -f k8s/deployment.yaml
           kubectl apply -f k8s/service.yaml
           kubectl apply -f k8s/ingress.yaml
 
-          kubectl rollout restart deployment/web-app
+          kubectl rollout status deployment/backend

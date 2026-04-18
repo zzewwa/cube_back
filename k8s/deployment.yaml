@@ -1,26 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: web-app
+  name: backend
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: web-app
+      app: backend
   template:
     metadata:
       labels:
-        app: web-app
+        app: backend
     spec:
       containers:
-      - name: web-app
+      - name: backend
         image: ghcr.io/zzewwa/cube-back:latest
         ports:
-        - containerPort: 8080
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
+        - containerPort: 8000
+        env:
+        - name: ENV
+          value: "production"
