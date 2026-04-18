@@ -12,20 +12,47 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-yade6y6sq5l^vw*2$b4wht)(3m**y--k7p_k@x%ex+r5b+3(%w'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+def _split_env_list(name, default=''):
+    raw_value = os.getenv(name, default)
+    return [item.strip() for item in raw_value.split(',') if item and item.strip()]
+
+
+def _unique(items):
+    return list(dict.fromkeys(items))
+
+
+host_ip = os.getenv('HOST_IP', '').strip()
+
+allowed_hosts = _split_env_list('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1')
+if host_ip:
+    allowed_hosts.append(host_ip)
+ALLOWED_HOSTS = ['*'] if DEBUG else _unique(allowed_hosts)
+
+csrf_trusted_origins = _split_env_list(
+    'DJANGO_CSRF_TRUSTED_ORIGINS',
+    'http://localhost:8000,http://127.0.0.1:8000'
+)
+if host_ip:
+    csrf_trusted_origins.append(f'http://{host_ip}:8000')
+
+CSRF_TRUSTED_ORIGINS = _unique(
+    [origin for origin in csrf_trusted_origins if origin.startswith(('http://', 'https://'))]
+)
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'channels',
     'main',
 ]
 
@@ -57,6 +84,13 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    }
+}
 
 
 # Database
@@ -115,6 +149,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
