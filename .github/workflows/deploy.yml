@@ -2,7 +2,7 @@ name: Deploy Backend to VM
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master, main ]
   workflow_dispatch:
 
 jobs:
