@@ -19,6 +19,8 @@ jobs:
           script: |
             set -e
 
+            export DEBIAN_FRONTEND=noninteractive
+
             if command -v sudo >/dev/null 2>&1; then
               SUDO="sudo"
             else
@@ -30,10 +32,10 @@ jobs:
               if command -v apt-get >/dev/null 2>&1; then
                 $SUDO apt-get update
                 if ! command -v git >/dev/null 2>&1; then
-                  $SUDO apt-get install -y git
+                  $SUDO apt-get install -yq git
                 fi
                 if ! command -v psql >/dev/null 2>&1; then
-                  $SUDO apt-get install -y postgresql-client
+                  $SUDO apt-get install -yq postgresql-client
                 fi
               elif command -v dnf >/dev/null 2>&1; then
                 if ! command -v git >/dev/null 2>&1; then
@@ -60,7 +62,11 @@ jobs:
               exit 1
             fi
 
-            if ! docker info >/dev/null 2>&1; then
+            if docker info >/dev/null 2>&1; then
+              DOCKER_CMD="docker"
+            elif [ -n "$SUDO" ] && $SUDO docker info >/dev/null 2>&1; then
+              DOCKER_CMD="$SUDO docker"
+            else
               echo "Docker daemon is not available for current user"
               exit 1
             fi
@@ -71,7 +77,17 @@ jobs:
             BACKEND_REPO_URL="${{ secrets.BACKEND_REPO_URL }}"
             FRONTEND_REPO_URL="${{ secrets.FRONTEND_REPO_URL }}"
 
-            mkdir -p "$APP_DIR"
+            if mkdir -p "$APP_DIR" >/dev/null 2>&1; then
+              true
+            elif [ -n "$SUDO" ]; then
+              $SUDO mkdir -p "$APP_DIR"
+              $SUDO chown "$USER":"$(id -gn)" "$APP_DIR"
+            else
+              APP_DIR="$HOME/my_cube_split"
+              mkdir -p "$APP_DIR"
+              BACKEND_DIR="$APP_DIR/backend_repo"
+              FRONTEND_DIR="$APP_DIR/frontend_repo"
+            fi
 
             if [ ! -d "$BACKEND_DIR/.git" ]; then
               git clone "$BACKEND_REPO_URL" "$BACKEND_DIR"
@@ -92,10 +108,14 @@ jobs:
             git pull origin "$(git rev-parse --abbrev-ref HEAD)"
 
             cd "$BACKEND_DIR"
-            if docker compose version >/dev/null 2>&1; then
-              COMPOSE_CMD="docker compose"
+            if $DOCKER_CMD compose version >/dev/null 2>&1; then
+              COMPOSE_CMD="$DOCKER_CMD compose"
             elif command -v docker-compose >/dev/null 2>&1; then
-              COMPOSE_CMD="docker-compose"
+              if [ -n "$SUDO" ]; then
+                COMPOSE_CMD="$SUDO docker-compose"
+              else
+                COMPOSE_CMD="docker-compose"
+              fi
             else
               echo "Neither 'docker compose' nor 'docker-compose' is available"
               exit 1
