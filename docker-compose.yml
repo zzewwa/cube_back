@@ -28,8 +28,8 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
-      HOST_IP: ${HOST_IP:-95.163.244.138}
-      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,95.163.244.138,3dspeedcubing.ru,www.3dspeedcubing.ru
+      HOST_IP: ${HOST_IP:-}
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,111.88.150.97,3dspeedcubing.ru,www.3dspeedcubing.ru
       DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost:8000,http://127.0.0.1:8000,http://3dspeedcubing.ru,http://www.3dspeedcubing.ru,https://3dspeedcubing.ru,https://www.3dspeedcubing.ru
     ports:
       - "8000:8000"

@@ -79,6 +79,7 @@ jobs:
             DOMAIN_NAME="${{ secrets.DOMAIN_NAME }}"
             DOMAIN_WWW="${{ secrets.DOMAIN_WWW }}"
             LETSENCRYPT_EMAIL="${{ secrets.LETSENCRYPT_EMAIL }}"
+            ENABLE_HTTPS="${{ secrets.ENABLE_HTTPS }}"
 
             if [ -z "$DOMAIN_NAME" ]; then
               DOMAIN_NAME="3dspeedcubing.ru"
@@ -145,16 +146,16 @@ jobs:
             $COMPOSE_CMD down
             $COMPOSE_CMD up -d --build
 
-            if ! command -v nginx >/dev/null 2>&1 || ! command -v certbot >/dev/null 2>&1; then
+            if ! command -v nginx >/dev/null 2>&1; then
               if command -v apt-get >/dev/null 2>&1; then
                 $SUDO apt-get update
-                $SUDO apt-get install -yq nginx certbot python3-certbot-nginx
+                $SUDO apt-get install -yq nginx
               elif command -v dnf >/dev/null 2>&1; then
-                $SUDO dnf install -y nginx certbot python3-certbot-nginx
+                $SUDO dnf install -y nginx
               elif command -v yum >/dev/null 2>&1; then
-                $SUDO yum install -y nginx certbot python3-certbot-nginx
+                $SUDO yum install -y nginx
               else
-                echo "Unsupported package manager for nginx/certbot install"
+                echo "Unsupported package manager for nginx install"
                 exit 1
               fi
             fi
@@ -189,12 +190,26 @@ jobs:
             $SUDO systemctl enable nginx
             $SUDO systemctl restart nginx
 
-            if [ -n "$LETSENCRYPT_EMAIL" ]; then
+            if [ "$ENABLE_HTTPS" = "true" ] && [ -n "$LETSENCRYPT_EMAIL" ]; then
+              if ! command -v certbot >/dev/null 2>&1; then
+                if command -v apt-get >/dev/null 2>&1; then
+                  $SUDO apt-get update
+                  $SUDO apt-get install -yq certbot python3-certbot-nginx
+                elif command -v dnf >/dev/null 2>&1; then
+                  $SUDO dnf install -y certbot python3-certbot-nginx
+                elif command -v yum >/dev/null 2>&1; then
+                  $SUDO yum install -y certbot python3-certbot-nginx
+                else
+                  echo "Unsupported package manager for certbot install"
+                  exit 1
+                fi
+              fi
+
               if [ ! -d "/etc/letsencrypt/live/$DOMAIN_NAME" ]; then
-                $SUDO certbot --nginx --non-interactive --agree-tos -m "$LETSENCRYPT_EMAIL" -d "$DOMAIN_NAME" -d "$DOMAIN_WWW" --redirect
+                $SUDO certbot --nginx --non-interactive --agree-tos -m "$LETSENCRYPT_EMAIL" -d "$DOMAIN_NAME" -d "$DOMAIN_WWW" --redirect || true
               else
                 $SUDO certbot renew --quiet || true
               fi
             else
-              echo "LETSENCRYPT_EMAIL is not set; skipping HTTPS certificate issue"
+              echo "HTTPS is disabled (set ENABLE_HTTPS=true and LETSENCRYPT_EMAIL to enable)"
             fi
