@@ -109,35 +109,32 @@ jobs:
               git clone "$FRONTEND_REPO_URL" "$FRONTEND_DIR"
             fi
 
-            cd "$BACKEND_DIR"
-            git fetch origin
-            if git ls-remote --heads origin main | grep -q "refs/heads/main"; then
-              TARGET_BRANCH="main"
-            else
-              TARGET_BRANCH="master"
-            fi
-            if git show-ref --verify --quiet "refs/heads/$TARGET_BRANCH"; then
-              git checkout "$TARGET_BRANCH"
-            else
-              git checkout -b "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
-            fi
-            git reset --hard "origin/$TARGET_BRANCH"
-            git clean -fd
+            sync_repo() {
+              REPO_DIR="$1"
+              REPO_URL="$2"
 
-            cd "$FRONTEND_DIR"
-            git fetch origin
-            if git ls-remote --heads origin main | grep -q "refs/heads/main"; then
-              TARGET_BRANCH="main"
-            else
-              TARGET_BRANCH="master"
-            fi
-            if git show-ref --verify --quiet "refs/heads/$TARGET_BRANCH"; then
-              git checkout "$TARGET_BRANCH"
-            else
-              git checkout -b "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
-            fi
-            git reset --hard "origin/$TARGET_BRANCH"
-            git clean -fd
+              cd "$REPO_DIR"
+              git remote set-url origin "$REPO_URL"
+              git fetch --prune origin
+
+              if git ls-remote --heads origin main | grep -q "refs/heads/main"; then
+                TARGET_BRANCH="main"
+              else
+                TARGET_BRANCH="master"
+              fi
+
+              git merge --abort >/dev/null 2>&1 || true
+              git rebase --abort >/dev/null 2>&1 || true
+              git reset --hard
+              git clean -fd
+
+              git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
+              git reset --hard "origin/$TARGET_BRANCH"
+              git clean -fd
+            }
+
+            sync_repo "$BACKEND_DIR" "$BACKEND_REPO_URL"
+            sync_repo "$FRONTEND_DIR" "$FRONTEND_REPO_URL"
 
             cd "$BACKEND_DIR"
             if $DOCKER_CMD compose version >/dev/null 2>&1; then
