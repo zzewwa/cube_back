@@ -76,6 +76,17 @@ jobs:
             FRONTEND_DIR="$APP_DIR/frontend_repo"
             BACKEND_REPO_URL="${{ secrets.BACKEND_REPO_URL }}"
             FRONTEND_REPO_URL="${{ secrets.FRONTEND_REPO_URL }}"
+            DOMAIN_NAME="${{ secrets.DOMAIN_NAME }}"
+            DOMAIN_WWW="${{ secrets.DOMAIN_WWW }}"
+            LETSENCRYPT_EMAIL="${{ secrets.LETSENCRYPT_EMAIL }}"
+
+            if [ -z "$DOMAIN_NAME" ]; then
+              DOMAIN_NAME="3dspeedcubing.ru"
+            fi
+
+            if [ -z "$DOMAIN_WWW" ]; then
+              DOMAIN_WWW="www.$DOMAIN_NAME"
+            fi
 
             if mkdir -p "$APP_DIR" >/dev/null 2>&1; then
               true
@@ -99,13 +110,23 @@ jobs:
 
             cd "$BACKEND_DIR"
             git fetch origin
-            git checkout main || git checkout master
-            git pull origin "$(git rev-parse --abbrev-ref HEAD)"
+            if git ls-remote --heads origin main | grep -q "refs/heads/main"; then
+              TARGET_BRANCH="main"
+            else
+              TARGET_BRANCH="master"
+            fi
+            git checkout "$TARGET_BRANCH"
+            git pull origin "$TARGET_BRANCH"
 
             cd "$FRONTEND_DIR"
             git fetch origin
-            git checkout main || git checkout master
-            git pull origin "$(git rev-parse --abbrev-ref HEAD)"
+            if git ls-remote --heads origin main | grep -q "refs/heads/main"; then
+              TARGET_BRANCH="main"
+            else
+              TARGET_BRANCH="master"
+            fi
+            git checkout "$TARGET_BRANCH"
+            git pull origin "$TARGET_BRANCH"
 
             cd "$BACKEND_DIR"
             if $DOCKER_CMD compose version >/dev/null 2>&1; then
@@ -123,3 +144,57 @@ jobs:
 
             $COMPOSE_CMD down
             $COMPOSE_CMD up -d --build
+
+            if ! command -v nginx >/dev/null 2>&1 || ! command -v certbot >/dev/null 2>&1; then
+              if command -v apt-get >/dev/null 2>&1; then
+                $SUDO apt-get update
+                $SUDO apt-get install -yq nginx certbot python3-certbot-nginx
+              elif command -v dnf >/dev/null 2>&1; then
+                $SUDO dnf install -y nginx certbot python3-certbot-nginx
+              elif command -v yum >/dev/null 2>&1; then
+                $SUDO yum install -y nginx certbot python3-certbot-nginx
+              else
+                echo "Unsupported package manager for nginx/certbot install"
+                exit 1
+              fi
+            fi
+
+            if command -v ufw >/dev/null 2>&1; then
+              $SUDO ufw allow 80/tcp || true
+              $SUDO ufw allow 443/tcp || true
+            fi
+
+            $SUDO mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
+            $SUDO tee /etc/nginx/sites-available/my_cube >/dev/null <<EOF
+            server {
+              listen 80;
+              server_name $DOMAIN_NAME $DOMAIN_WWW;
+
+              location / {
+                proxy_pass http://127.0.0.1:8000;
+                proxy_http_version 1.1;
+                proxy_set_header Host \$host;
+                proxy_set_header X-Real-IP \$remote_addr;
+                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto \$scheme;
+                proxy_set_header Upgrade \$http_upgrade;
+                proxy_set_header Connection "upgrade";
+              }
+            }
+            EOF
+
+            $SUDO ln -sfn /etc/nginx/sites-available/my_cube /etc/nginx/sites-enabled/my_cube
+            $SUDO rm -f /etc/nginx/sites-enabled/default
+            $SUDO nginx -t
+            $SUDO systemctl enable nginx
+            $SUDO systemctl restart nginx
+
+            if [ -n "$LETSENCRYPT_EMAIL" ]; then
+              if [ ! -d "/etc/letsencrypt/live/$DOMAIN_NAME" ]; then
+                $SUDO certbot --nginx --non-interactive --agree-tos -m "$LETSENCRYPT_EMAIL" -d "$DOMAIN_NAME" -d "$DOMAIN_WWW" --redirect
+              else
+                $SUDO certbot renew --quiet || true
+              fi
+            else
+              echo "LETSENCRYPT_EMAIL is not set; skipping HTTPS certificate issue"
+            fi
