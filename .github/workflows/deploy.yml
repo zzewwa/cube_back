@@ -1,31 +1,59 @@
-name: Deploy Backend
+name: Deploy Backend to VM
 
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          version: 'v1.32.0'
+          host: ${{ secrets.VM_PUBLIC_IP }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
+          script: |
+            set -e
 
-      - name: Deploy
-        run: |
-          echo "${{ secrets.KUBE_CONFIG }}" > kubeconfig.yaml
-          export KUBECONFIG=./kubeconfig.yaml
+            APP_DIR="/opt/my_cube_split"
+            BACKEND_DIR="$APP_DIR/backend_repo"
+            FRONTEND_DIR="$APP_DIR/frontend_repo"
+            BACKEND_REPO_URL="${{ secrets.BACKEND_REPO_URL }}"
+            FRONTEND_REPO_URL="${{ secrets.FRONTEND_REPO_URL }}"
 
-          # Обновляем образ в манифесте
-          sed -i "s|ghcr.io/zzewwa/cube-back:latest|ghcr.io/zzewwa/cube-back:${{ github.sha }}|g" k8s/deployment.yaml
+            mkdir -p "$APP_DIR"
 
-          kubectl apply -f k8s/deployment.yaml
-          kubectl apply -f k8s/service.yaml
-          kubectl apply -f k8s/ingress.yaml
+            if [ ! -d "$BACKEND_DIR/.git" ]; then
+              git clone "$BACKEND_REPO_URL" "$BACKEND_DIR"
+            fi
 
-          kubectl rollout status deployment/backend
+            if [ ! -d "$FRONTEND_DIR/.git" ]; then
+              git clone "$FRONTEND_REPO_URL" "$FRONTEND_DIR"
+            fi
+
+            cd "$BACKEND_DIR"
+            git fetch origin
+            git checkout main || git checkout master
+            git pull origin "$(git rev-parse --abbrev-ref HEAD)"
+
+            cd "$FRONTEND_DIR"
+            git fetch origin
+            git checkout main || git checkout master
+            git pull origin "$(git rev-parse --abbrev-ref HEAD)"
+
+            cd "$BACKEND_DIR"
+            if docker compose version >/dev/null 2>&1; then
+              COMPOSE_CMD="docker compose"
+            elif command -v docker-compose >/dev/null 2>&1; then
+              COMPOSE_CMD="docker-compose"
+            else
+              echo "Neither 'docker compose' nor 'docker-compose' is available"
+              exit 1
+            fi
+
+            $COMPOSE_CMD down
+            $COMPOSE_CMD up -d --build
