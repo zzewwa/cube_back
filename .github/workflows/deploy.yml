@@ -1,0 +1,65 @@
+name: Deploy Backend Stack
+
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to VM over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_PUBLIC_IP }}
+          username: ${{ secrets.VM_USER || 'yc-user' }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
+          script: |
+            set -e
+
+            APP_DIR="/opt/my_cube_split"
+            BACKEND_DIR="$APP_DIR/backend_repo"
+            FRONTEND_DIR="$APP_DIR/frontend_repo"
+            BACKEND_REPO_URL="${{ github.server_url }}/${{ github.repository }}.git"
+            FRONTEND_REPO_URL="${{ secrets.FRONTEND_REPO_URL }}"
+
+            if [ -z "$FRONTEND_REPO_URL" ]; then
+              echo "FRONTEND_REPO_URL secret is not set"
+              exit 1
+            fi
+
+            mkdir -p "$APP_DIR"
+
+            if [ ! -d "$BACKEND_DIR/.git" ]; then
+              git clone "$BACKEND_REPO_URL" "$BACKEND_DIR"
+            fi
+
+            if [ ! -d "$FRONTEND_DIR/.git" ]; then
+              git clone "$FRONTEND_REPO_URL" "$FRONTEND_DIR"
+            fi
+
+            cd "$BACKEND_DIR"
+            git fetch origin
+            if git ls-remote --heads origin main | grep -q "refs/heads/main"; then
+              git checkout main
+              git pull origin main
+            else
+              git checkout master
+              git pull origin master
+            fi
+
+            cd "$FRONTEND_DIR"
+            git fetch origin
+            if git ls-remote --heads origin main | grep -q "refs/heads/main"; then
+              git checkout main
+              git pull origin main
+            else
+              git checkout master
+              git pull origin master
+            fi
+
+            cd "$BACKEND_DIR"
+            docker compose down
+            docker compose up -d --build

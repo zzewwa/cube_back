@@ -1,11 +1,48 @@
 from django.urls import path
 
-from .views import dashboard_view, login_view, logout_view, register_view
+from .views import (
+    dashboard_view,
+    login_view,
+    logout_view,
+    personal_record_attempt_create_view,
+    ranked_game_view,
+    ranked_queue_join_view,
+    ranked_queue_status_view,
+    room_detail_view,
+    room_leave_view,
+    room_invitation_action_view,
+    room_invite_create_view,
+    room_user_search_view,
+    room_profile_card_view,
+    room_pending_invitations_view,
+    cube_state_load_view,
+    cube_state_save_view,
+    rooms_view,
+    profile_update_view,
+    public_profile_view,
+    register_view,
+)
 
 
 urlpatterns = [
     path('', login_view, name='login'),
     path('register/', register_view, name='register'),
     path('dashboard/', dashboard_view, name='dashboard'),
+    path('ranked/', ranked_game_view, name='ranked_game'),
+    path('ranked/queue/join/', ranked_queue_join_view, name='ranked_queue_join'),
+    path('ranked/queue/status/', ranked_queue_status_view, name='ranked_queue_status'),
+    path('rooms/', rooms_view, name='rooms'),
+    path('rooms/search-users/', room_user_search_view, name='room_user_search'),
+        path('rooms/pending-invitations/', room_pending_invitations_view, name='room_pending_invitations'),
+    path('rooms/profile-card/<str:username>/', room_profile_card_view, name='room_profile_card'),
+    path('api/cube-state/load/', cube_state_load_view, name='cube_state_load'),
+    path('api/cube-state/save/', cube_state_save_view, name='cube_state_save'),
+    path('rooms/invitations/<int:invitation_id>/<str:action>/', room_invitation_action_view, name='room_invitation_action'),
+        path('rooms/r/<str:room_code>/invite/', room_invite_create_view, name='room_invite_create'),
+        path('rooms/r/<str:room_code>/leave/', room_leave_view, name='room_leave'),
+        path('rooms/r/<str:room_code>/', room_detail_view, name='room_detail'),
+    path('profile/update/', profile_update_view, name='profile_update'),
+    path('records/personal/', personal_record_attempt_create_view, name='personal_record_attempt_create'),
+    path('profile/<str:username>/', public_profile_view, name='public_profile'),
     path('logout/', logout_view, name='logout'),
 ]
