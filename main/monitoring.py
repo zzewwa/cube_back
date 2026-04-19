@@ -1,26 +1,24 @@
 import ipaddress
+from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.http import HttpResponse
+from django.utils import timezone
 from django.views.decorators.http import require_GET
 from prometheus_client import CONTENT_TYPE_LATEST, Gauge, generate_latest
 
-from .consumers import RoomLiveConsumer
-from .models import RankedMatchQueue, Room
+from .models import RankedMatchQueue, Room, UserPresence
 
-online_users_gauge = Gauge("mycube_online_users", "Current online users in websocket rooms")
+online_users_gauge = Gauge("mycube_online_users", "Current online users across the site")
 open_rooms_gauge = Gauge("mycube_open_rooms", "Rooms in waiting or running status")
 total_users_gauge = Gauge("mycube_total_users", "Total registered users")
 queue_users_gauge = Gauge("mycube_ranked_queue_users", "Users currently waiting in ranked queue")
 
 
 def _online_users_count():
-    usernames = set()
-    for room_state in RoomLiveConsumer.ROOM_STATE.values():
-        for username in room_state.get("connections", {}).values():
-            usernames.add(username)
-    return len(usernames)
+    online_threshold = timezone.now() - timedelta(seconds=60)
+    return UserPresence.objects.filter(last_seen__gte=online_threshold).count()
 
 
 def collect_platform_metrics():

@@ -268,6 +268,18 @@ class RankedMatchQueue(models.Model):
 		return f'{self.user.username}: {self.status}'
 
 
+class UserPresence(models.Model):
+	user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='presence')
+	last_seen = models.DateTimeField('Последняя активность', default=timezone.now, db_index=True)
+
+	class Meta:
+		verbose_name = 'Присутствие пользователя'
+		verbose_name_plural = 'Присутствие пользователей'
+
+	def __str__(self):
+		return f'{self.user.username}: {self.last_seen.isoformat()}'
+
+
 @receiver(post_save, sender=User)
 def create_cube_state(sender, instance, created, **kwargs):
 	if created:
