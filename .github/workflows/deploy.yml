@@ -79,16 +79,6 @@ jobs:
             FRONTEND_DIR="$APP_DIR/frontend_repo"
             BACKEND_REPO_URL="${{ secrets.BACKEND_REPO_URL }}"
             FRONTEND_REPO_URL="${{ secrets.FRONTEND_REPO_URL }}"
-            DOMAIN_NAME="${{ secrets.DOMAIN_NAME }}"
-            DOMAIN_WWW="${{ secrets.DOMAIN_WWW }}"
-
-            if [ -z "$DOMAIN_NAME" ]; then
-              DOMAIN_NAME="3dspeedcubing.ru"
-            fi
-
-            if [ -z "$DOMAIN_WWW" ]; then
-              DOMAIN_WWW="www.$DOMAIN_NAME"
-            fi
 
             if mkdir -p "$APP_DIR" >/dev/null 2>&1; then
               true
@@ -145,71 +135,3 @@ jobs:
 
             $COMPOSE_CMD down
             $COMPOSE_CMD up -d --build
-
-            if ! command -v nginx >/dev/null 2>&1; then
-              if command -v apt-get >/dev/null 2>&1; then
-                $SUDO apt-get update
-                $SUDO apt-get install -yq nginx
-              elif command -v dnf >/dev/null 2>&1; then
-                $SUDO dnf install -y nginx
-              elif command -v yum >/dev/null 2>&1; then
-                $SUDO yum install -y nginx
-              else
-                echo "Unsupported package manager for nginx install"
-                exit 1
-              fi
-            fi
-
-            if command -v ufw >/dev/null 2>&1; then
-              $SUDO ufw allow 80/tcp || true
-              $SUDO ufw allow 443/tcp || true
-            fi
-
-            $SUDO mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
-            $SUDO tee /etc/nginx/sites-available/my_cube >/dev/null <<EOF
-            server {
-              listen 80;
-              server_name $DOMAIN_NAME $DOMAIN_WWW;
-
-              location /media/ {
-                alias $BACKEND_DIR/media/;
-                access_log off;
-                expires 30d;
-              }
-
-              location /static/ {
-                alias $BACKEND_DIR/staticfiles/;
-                access_log off;
-                expires 30d;
-              }
-
-              location / {
-                proxy_pass http://127.0.0.1:8000;
-                proxy_http_version 1.1;
-                proxy_set_header Host \$host;
-                proxy_set_header X-Real-IP \$remote_addr;
-                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-                proxy_set_header X-Forwarded-Proto \$scheme;
-                proxy_set_header Upgrade \$http_upgrade;
-                proxy_set_header Connection "upgrade";
-              }
-            }
-            EOF
-
-            $SUDO ln -sfn /etc/nginx/sites-available/my_cube /etc/nginx/sites-enabled/my_cube
-            $SUDO rm -f /etc/nginx/sites-enabled/default
-            $SUDO mkdir -p "$BACKEND_DIR/media" "$BACKEND_DIR/staticfiles"
-            $SUDO chmod -R a+rX "$BACKEND_DIR/media" "$BACKEND_DIR/staticfiles" || true
-            if $SUDO nginx -t; then
-              if command -v systemctl >/dev/null 2>&1; then
-                $SUDO systemctl enable nginx || true
-                $SUDO systemctl restart nginx || true
-              elif command -v service >/dev/null 2>&1; then
-                $SUDO service nginx restart || true
-              else
-                echo "No service manager found, skipping nginx restart"
-              fi
-            else
-              echo "nginx -t failed, skipping nginx restart"
-            fi
-            echo "HTTPS setup is skipped in workflow"
