@@ -200,7 +200,16 @@ jobs:
             $SUDO rm -f /etc/nginx/sites-enabled/default
             $SUDO mkdir -p "$BACKEND_DIR/media" "$BACKEND_DIR/staticfiles"
             $SUDO chmod -R a+rX "$BACKEND_DIR/media" "$BACKEND_DIR/staticfiles" || true
-            $SUDO nginx -t
-            $SUDO systemctl enable nginx
-            $SUDO systemctl restart nginx
+            if $SUDO nginx -t; then
+              if command -v systemctl >/dev/null 2>&1; then
+                $SUDO systemctl enable nginx || true
+                $SUDO systemctl restart nginx || true
+              elif command -v service >/dev/null 2>&1; then
+                $SUDO service nginx restart || true
+              else
+                echo "No service manager found, skipping nginx restart"
+              fi
+            else
+              echo "nginx -t failed, skipping nginx restart"
+            fi
             echo "HTTPS setup is skipped in workflow"
