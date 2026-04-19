@@ -78,6 +78,7 @@ jobs:
             FRONTEND_REPO_URL="${{ secrets.FRONTEND_REPO_URL }}"
             TELEGRAM_BOT_TOKEN="${{ secrets.TELEGRAM_BOT_TOKEN }}"
             TELEGRAM_CHAT_ID="${{ secrets.TELEGRAM_CHAT_ID }}"
+            TELEGRAM_PROXY_URL="${{ secrets.TELEGRAM_PROXY_URL }}"
 
             if mkdir -p "$APP_DIR" >/dev/null 2>&1; then
               true
@@ -113,6 +114,7 @@ jobs:
             cat > .env <<EOF
             TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
             TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+            TELEGRAM_PROXY_URL=${TELEGRAM_PROXY_URL}
             EOF
 
             if $DOCKER_CMD compose version >/dev/null 2>&1; then
