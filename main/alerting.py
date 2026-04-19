@@ -10,6 +10,37 @@ from django.views.decorators.http import require_POST
 logger = logging.getLogger(__name__)
 
 
+def _normalize_proxy_url(raw_proxy):
+    proxy = (raw_proxy or '').strip()
+    if not proxy:
+        return ''
+
+    if proxy.startswith(('http://', 'https://', 'socks5://', 'socks5h://')):
+        return proxy
+
+    parts = proxy.split(':')
+    if len(parts) == 4:
+        host, port, username, password = parts
+        username_q = parse.quote(username, safe='')
+        password_q = parse.quote(password, safe='')
+        return f'http://{username_q}:{password_q}@{host}:{port}'
+
+    if len(parts) == 2:
+        host, port = parts
+        return f'http://{host}:{port}'
+
+    return proxy
+
+
+def _build_telegram_opener():
+    proxy_url = _normalize_proxy_url(getattr(settings, 'TELEGRAM_PROXY_URL', ''))
+    if not proxy_url:
+        return request.build_opener()
+
+    proxy_handler = request.ProxyHandler({'http': proxy_url, 'https': proxy_url})
+    return request.build_opener(proxy_handler)
+
+
 def _send_telegram_message(text):
     bot_token = (settings.TELEGRAM_BOT_TOKEN or "").strip()
     chat_id = (settings.TELEGRAM_CHAT_ID or "").strip()
@@ -33,7 +64,8 @@ def _send_telegram_message(text):
     )
 
     try:
-        with request.urlopen(req, timeout=10) as response:
+        opener = _build_telegram_opener()
+        with opener.open(req, timeout=10) as response:
             status_ok = 200 <= response.status < 300
             if not status_ok:
                 logger.error("Telegram alert failed with status %s", response.status)

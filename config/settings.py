@@ -45,6 +45,7 @@ METRICS_BEARER_TOKEN = os.getenv('METRICS_BEARER_TOKEN', 'mycube-metrics-token-2
 ALERTMANAGER_WEBHOOK_TOKEN = os.getenv('ALERTMANAGER_WEBHOOK_TOKEN', 'mycube-alertmanager-webhook-token-2026')
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '')
+TELEGRAM_PROXY_URL = os.getenv('TELEGRAM_PROXY_URL', '')
 
 
 # Application definition
