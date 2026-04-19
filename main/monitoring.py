@@ -47,7 +47,10 @@ def _developer_access_allowed(request):
 def _internal_token_allowed(request):
     auth_header = request.headers.get("Authorization", "")
     expected = f"Bearer {settings.METRICS_BEARER_TOKEN}"
-    return auth_header == expected
+    if auth_header == expected:
+        return True
+    query_token = request.GET.get("token", "")
+    return query_token == settings.METRICS_BEARER_TOKEN
 
 
 @require_GET
