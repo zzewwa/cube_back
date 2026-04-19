@@ -34,9 +34,6 @@
                                                             "color":  {
                                                                           "mode":  "palette-classic"
                                                                       },
-                                                            "mappings":  [
-
-                                                                         ],
                                                             "thresholds":  {
                                                                                "mode":  "absolute",
                                                                                "steps":  [
@@ -83,11 +80,6 @@
                        "pluginVersion":  "11.1.0",
                        "targets":  [
                                        {
-                                           "datasource":  {
-                                                              "type":  "prometheus",
-                                                              "uid":  "mycube-prometheus"
-                                                          },
-                                           "editorMode":  "code",
                                            "expr":  "mycube_online_users",
                                            "instant":  true,
                                            "legendFormat":  "",
@@ -108,9 +100,6 @@
                                                             "color":  {
                                                                           "mode":  "palette-classic"
                                                                       },
-                                                            "mappings":  [
-
-                                                                         ],
                                                             "thresholds":  {
                                                                                "mode":  "absolute",
                                                                                "steps":  [
@@ -157,11 +146,6 @@
                        "pluginVersion":  "11.1.0",
                        "targets":  [
                                        {
-                                           "datasource":  {
-                                                              "type":  "prometheus",
-                                                              "uid":  "mycube-prometheus"
-                                                          },
-                                           "editorMode":  "code",
                                            "expr":  "mycube_open_rooms",
                                            "instant":  true,
                                            "legendFormat":  "",
@@ -182,9 +166,6 @@
                                                             "color":  {
                                                                           "mode":  "palette-classic"
                                                                       },
-                                                            "mappings":  [
-
-                                                                         ],
                                                             "thresholds":  {
                                                                                "mode":  "absolute",
                                                                                "steps":  [
@@ -231,11 +212,6 @@
                        "pluginVersion":  "11.1.0",
                        "targets":  [
                                        {
-                                           "datasource":  {
-                                                              "type":  "prometheus",
-                                                              "uid":  "mycube-prometheus"
-                                                          },
-                                           "editorMode":  "code",
                                            "expr":  "mycube_total_users",
                                            "instant":  true,
                                            "legendFormat":  "",
@@ -256,9 +232,6 @@
                                                             "color":  {
                                                                           "mode":  "palette-classic"
                                                                       },
-                                                            "mappings":  [
-
-                                                                         ],
                                                             "thresholds":  {
                                                                                "mode":  "absolute",
                                                                                "steps":  [
@@ -305,11 +278,6 @@
                        "pluginVersion":  "11.1.0",
                        "targets":  [
                                        {
-                                           "datasource":  {
-                                                              "type":  "prometheus",
-                                                              "uid":  "mycube-prometheus"
-                                                          },
-                                           "editorMode":  "code",
                                            "expr":  "mycube_ranked_queue_users",
                                            "instant":  true,
                                            "legendFormat":  "",
@@ -319,6 +287,128 @@
                                    ],
                        "title":  "В Очереди Ranked",
                        "type":  "stat"
+                   },
+                   {
+                       "datasource":  {
+                                          "type":  "prometheus",
+                                          "uid":  "mycube-prometheus"
+                                      },
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "color":  {
+                                                                          "mode":  "palette-classic"
+                                                                      },
+                                                            "custom":  {
+                                                                           "drawStyle":  "line",
+                                                                           "fillOpacity":  10,
+                                                                           "lineInterpolation":  "smooth",
+                                                                           "lineWidth":  2,
+                                                                           "pointSize":  4,
+                                                                           "showPoints":  "never"
+                                                                       }
+                                                        },
+                                           "overrides":  [
+
+                                                         ]
+                                       },
+                       "gridPos":  {
+                                       "h":  10,
+                                       "w":  12,
+                                       "x":  0,
+                                       "y":  8
+                                   },
+                       "id":  5,
+                       "options":  {
+                                       "legend":  {
+                                                      "displayMode":  "table",
+                                                      "placement":  "bottom",
+                                                      "showLegend":  true
+                                                  },
+                                       "tooltip":  {
+                                                       "mode":  "multi",
+                                                       "sort":  "none"
+                                                   }
+                                   },
+                       "pluginVersion":  "11.1.0",
+                       "targets":  [
+                                       {
+                                           "expr":  "mycube_online_users",
+                                           "instant":  false,
+                                           "legendFormat":  "Онлайн",
+                                           "range":  true,
+                                           "refId":  "A"
+                                       },
+                                       {
+                                           "expr":  "mycube_open_rooms",
+                                           "instant":  false,
+                                           "legendFormat":  "Открытые комнаты",
+                                           "range":  true,
+                                           "refId":  "B"
+                                       }
+                                   ],
+                       "title":  "Динамика Онлайна и Комнат",
+                       "type":  "timeseries"
+                   },
+                   {
+                       "datasource":  {
+                                          "type":  "prometheus",
+                                          "uid":  "mycube-prometheus"
+                                      },
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "color":  {
+                                                                          "mode":  "palette-classic"
+                                                                      },
+                                                            "custom":  {
+                                                                           "drawStyle":  "line",
+                                                                           "fillOpacity":  10,
+                                                                           "lineInterpolation":  "smooth",
+                                                                           "lineWidth":  2,
+                                                                           "pointSize":  4,
+                                                                           "showPoints":  "never"
+                                                                       }
+                                                        },
+                                           "overrides":  [
+
+                                                         ]
+                                       },
+                       "gridPos":  {
+                                       "h":  10,
+                                       "w":  12,
+                                       "x":  12,
+                                       "y":  8
+                                   },
+                       "id":  6,
+                       "options":  {
+                                       "legend":  {
+                                                      "displayMode":  "table",
+                                                      "placement":  "bottom",
+                                                      "showLegend":  true
+                                                  },
+                                       "tooltip":  {
+                                                       "mode":  "multi",
+                                                       "sort":  "none"
+                                                   }
+                                   },
+                       "pluginVersion":  "11.1.0",
+                       "targets":  [
+                                       {
+                                           "expr":  "mycube_total_users",
+                                           "instant":  false,
+                                           "legendFormat":  "Всего пользователей",
+                                           "range":  true,
+                                           "refId":  "A"
+                                       },
+                                       {
+                                           "expr":  "mycube_ranked_queue_users",
+                                           "instant":  false,
+                                           "legendFormat":  "В очереди Ranked",
+                                           "range":  true,
+                                           "refId":  "B"
+                                       }
+                                   ],
+                       "title":  "Динамика Пользователей и Очереди",
+                       "type":  "timeseries"
                    }
                ],
     "refresh":  "5s",
@@ -342,6 +432,6 @@
     "timezone":  "browser",
     "title":  "MyCube Overview",
     "uid":  "mycube-overview",
-    "version":  1,
+    "version":  2,
     "weekStart":  ""
 }
