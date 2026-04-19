@@ -19,12 +19,14 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import include, path, re_path
 from django.views.static import serve
+from main.alerting import alertmanager_webhook_view
 from main.monitoring import internal_metrics_view, metrics_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('metrics/', metrics_view),
     path('internal/metrics/', internal_metrics_view),
+    path('internal/alertmanager/webhook/', alertmanager_webhook_view),
     path('', include('main.urls')),
 ]
 
