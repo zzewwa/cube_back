@@ -4,7 +4,5 @@ global:
 scrape_configs:
   - job_name: mycube_backend
     metrics_path: /internal/metrics/
-    params:
-      token: ["mycube-metrics-token-2026"]
     static_configs:
       - targets: ["web:8000"]
