@@ -102,48 +102,32 @@ jobs:
               FRONTEND_DIR="$APP_DIR/frontend_repo"
             fi
 
-            if [ ! -d "$BACKEND_DIR/.git" ]; then
-              git clone "$BACKEND_REPO_URL" "$BACKEND_DIR"
-            fi
-
-            if [ ! -d "$FRONTEND_DIR/.git" ]; then
-              git clone "$FRONTEND_REPO_URL" "$FRONTEND_DIR"
-            fi
-
-            if [ -n "$SUDO" ]; then
-              $SUDO mkdir -p "$BACKEND_DIR" "$FRONTEND_DIR"
-              $SUDO chown -R "$DEPLOY_USER":"$DEPLOY_GROUP" "$BACKEND_DIR" "$FRONTEND_DIR" || true
-            fi
-
-            sync_repo() {
+            sync_repo_fresh() {
               REPO_DIR="$1"
               REPO_URL="$2"
 
-              cd "$REPO_DIR"
-              if [ -n "$SUDO" ]; then
-                $SUDO chown -R "$DEPLOY_USER":"$DEPLOY_GROUP" "$REPO_DIR" || true
-              fi
-              git remote set-url origin "$REPO_URL"
-              git fetch --prune origin
-
-              if git ls-remote --heads origin main | grep -q "refs/heads/main"; then
+              if git ls-remote --heads "$REPO_URL" main | grep -q "refs/heads/main"; then
                 TARGET_BRANCH="main"
               else
                 TARGET_BRANCH="master"
               fi
 
-              git merge --abort >/dev/null 2>&1 || true
-              git rebase --abort >/dev/null 2>&1 || true
-              git reset --hard HEAD >/dev/null 2>&1 || true
-              git clean -fd
+              if [ -e "$REPO_DIR" ]; then
+                if [ -n "$SUDO" ]; then
+                  $SUDO rm -rf "$REPO_DIR"
+                else
+                  rm -rf "$REPO_DIR"
+                fi
+              fi
 
-              git checkout -f "$TARGET_BRANCH" >/dev/null 2>&1 || git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
-              git reset --hard "origin/$TARGET_BRANCH"
-              git clean -fd
+              git clone --depth 1 --branch "$TARGET_BRANCH" "$REPO_URL" "$REPO_DIR"
+              if [ -n "$SUDO" ]; then
+                $SUDO chown -R "$DEPLOY_USER":"$DEPLOY_GROUP" "$REPO_DIR" || true
+              fi
             }
 
-            sync_repo "$BACKEND_DIR" "$BACKEND_REPO_URL"
-            sync_repo "$FRONTEND_DIR" "$FRONTEND_REPO_URL"
+            sync_repo_fresh "$BACKEND_DIR" "$BACKEND_REPO_URL"
+            sync_repo_fresh "$FRONTEND_DIR" "$FRONTEND_REPO_URL"
 
             cd "$BACKEND_DIR"
             if $DOCKER_CMD compose version >/dev/null 2>&1; then
