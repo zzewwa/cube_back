@@ -17,7 +17,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script_stop: true
           script: |
-            set -eu
+            set -e
 
             export DEBIAN_FRONTEND=noninteractive
 
@@ -26,9 +26,6 @@ jobs:
             else
               SUDO=""
             fi
-
-            DEPLOY_USER="$(id -un)"
-            DEPLOY_GROUP="$(id -gn)"
 
             # Install required host tools if they are missing.
             if ! command -v git >/dev/null 2>&1 || ! command -v psql >/dev/null 2>&1; then
@@ -84,7 +81,7 @@ jobs:
               true
             elif [ -n "$SUDO" ]; then
               $SUDO mkdir -p "$APP_DIR"
-              $SUDO chown "$DEPLOY_USER":"$DEPLOY_GROUP" "$APP_DIR"
+              $SUDO chown "$USER":"$(id -gn)" "$APP_DIR"
             else
               APP_DIR="$HOME/my_cube_split"
               mkdir -p "$APP_DIR"
@@ -92,48 +89,23 @@ jobs:
               FRONTEND_DIR="$APP_DIR/frontend_repo"
             fi
 
-            if [ ! -w "$APP_DIR" ]; then
-              if [ -n "$SUDO" ]; then
-                $SUDO chown -R "$DEPLOY_USER":"$DEPLOY_GROUP" "$APP_DIR"
-              else
-                APP_DIR="$HOME/my_cube_split"
-                mkdir -p "$APP_DIR"
-                BACKEND_DIR="$APP_DIR/backend_repo"
-                FRONTEND_DIR="$APP_DIR/frontend_repo"
-              fi
+            if [ ! -d "$BACKEND_DIR/.git" ]; then
+              git clone "$BACKEND_REPO_URL" "$BACKEND_DIR"
             fi
 
-            sync_repo_fresh() {
-              REPO_DIR="$1"
-              REPO_URL="$2"
+            if [ ! -d "$FRONTEND_DIR/.git" ]; then
+              git clone "$FRONTEND_REPO_URL" "$FRONTEND_DIR"
+            fi
 
-              if git ls-remote --heads "$REPO_URL" main | grep -q "refs/heads/main"; then
-                TARGET_BRANCH="main"
-              else
-                TARGET_BRANCH="master"
-              fi
+            cd "$BACKEND_DIR"
+            git fetch origin
+            git checkout main || git checkout master
+            git pull origin "$(git rev-parse --abbrev-ref HEAD)"
 
-              if [ -e "$REPO_DIR" ]; then
-                if [ -n "$SUDO" ]; then
-                  $SUDO rm -rf "$REPO_DIR"
-                else
-                  rm -rf "$REPO_DIR"
-                fi
-              fi
-
-              if [ -n "$SUDO" ] && [ ! -w "$(dirname "$REPO_DIR")" ]; then
-                $SUDO git clone --depth 1 --branch "$TARGET_BRANCH" "$REPO_URL" "$REPO_DIR"
-                $SUDO chown -R "$DEPLOY_USER":"$DEPLOY_GROUP" "$REPO_DIR" || true
-              else
-                git clone --depth 1 --branch "$TARGET_BRANCH" "$REPO_URL" "$REPO_DIR"
-                if [ -n "$SUDO" ]; then
-                  $SUDO chown -R "$DEPLOY_USER":"$DEPLOY_GROUP" "$REPO_DIR" || true
-                fi
-              fi
-            }
-
-            sync_repo_fresh "$BACKEND_DIR" "$BACKEND_REPO_URL"
-            sync_repo_fresh "$FRONTEND_DIR" "$FRONTEND_REPO_URL"
+            cd "$FRONTEND_DIR"
+            git fetch origin
+            git checkout main || git checkout master
+            git pull origin "$(git rev-parse --abbrev-ref HEAD)"
 
             cd "$BACKEND_DIR"
             if $DOCKER_CMD compose version >/dev/null 2>&1; then
