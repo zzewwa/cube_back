@@ -92,6 +92,17 @@ jobs:
               FRONTEND_DIR="$APP_DIR/frontend_repo"
             fi
 
+            if [ ! -w "$APP_DIR" ]; then
+              if [ -n "$SUDO" ]; then
+                $SUDO chown -R "$DEPLOY_USER":"$DEPLOY_GROUP" "$APP_DIR"
+              else
+                APP_DIR="$HOME/my_cube_split"
+                mkdir -p "$APP_DIR"
+                BACKEND_DIR="$APP_DIR/backend_repo"
+                FRONTEND_DIR="$APP_DIR/frontend_repo"
+              fi
+            fi
+
             sync_repo_fresh() {
               REPO_DIR="$1"
               REPO_URL="$2"
@@ -110,9 +121,14 @@ jobs:
                 fi
               fi
 
-              git clone --depth 1 --branch "$TARGET_BRANCH" "$REPO_URL" "$REPO_DIR"
-              if [ -n "$SUDO" ]; then
+              if [ -n "$SUDO" ] && [ ! -w "$(dirname "$REPO_DIR")" ]; then
+                $SUDO git clone --depth 1 --branch "$TARGET_BRANCH" "$REPO_URL" "$REPO_DIR"
                 $SUDO chown -R "$DEPLOY_USER":"$DEPLOY_GROUP" "$REPO_DIR" || true
+              else
+                git clone --depth 1 --branch "$TARGET_BRANCH" "$REPO_URL" "$REPO_DIR"
+                if [ -n "$SUDO" ]; then
+                  $SUDO chown -R "$DEPLOY_USER":"$DEPLOY_GROUP" "$REPO_DIR" || true
+                fi
               fi
             }
 
