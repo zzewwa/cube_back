@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: mycube_backend
+    metrics_path: /internal/metrics/
+    authorization:
+      type: Bearer
+      credentials: "mycube-metrics-token-2026"
+    static_configs:
+      - targets: ["web:8000"]

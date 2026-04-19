@@ -41,6 +41,8 @@ CSRF_TRUSTED_ORIGINS = _unique(
     [origin for origin in csrf_trusted_origins if origin.startswith(('http://', 'https://'))]
 )
 
+METRICS_BEARER_TOKEN = os.getenv('METRICS_BEARER_TOKEN', 'mycube-metrics-token-2026')
+
 
 # Application definition
 

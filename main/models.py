@@ -22,6 +22,7 @@ class UserProfile(models.Model):
 		PLAYER = 'player', 'Игрок'
 		SPECTATOR = 'spectator', 'Зритель'
 		ORGANIZER = 'organizer', 'Организатор'
+		DEVELOPER = 'developer', 'Разработчик'
 
 	user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
 	display_name = models.CharField('Отображаемое имя', max_length=80, blank=True, null=True, unique=True)

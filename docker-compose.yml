@@ -29,6 +29,7 @@ services:
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
       HOST_IP: ${HOST_IP:-}
+      METRICS_BEARER_TOKEN: ${METRICS_BEARER_TOKEN:-mycube-metrics-token-2026}
       DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,111.88.150.97,3dspeedcubing.ru,www.3dspeedcubing.ru
       DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost:8000,http://127.0.0.1:8000,http://3dspeedcubing.ru,http://www.3dspeedcubing.ru,https://3dspeedcubing.ru,https://www.3dspeedcubing.ru
     ports:
@@ -39,5 +40,33 @@ services:
       - ../frontend_repo/static/main:/app/main/static/main:ro
     command: sh -c "python manage.py migrate && python manage.py collectstatic --noinput && python manage.py runserver 0.0.0.0:8000"
 
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    restart: unless-stopped
+    depends_on:
+      - web
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+
 volumes:
   postgres_data:
+  grafana_data:

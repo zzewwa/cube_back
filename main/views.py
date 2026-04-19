@@ -149,7 +149,7 @@ def _build_profile_context(target_user, profile_form=None):
 	personal_records = PersonalRecordAttempt.objects.filter(user=target_user)
 	public_records = PublicRecordAttempt.objects.filter(user=target_user)
 	rating_points = _normalize_profile_rating(profile, personal_records, public_records)
-	rating_position = _get_dense_rank_position(rating_points) if rating_points > 0 else 0
+	rating_position = _get_dense_rank_position(rating_points)
 	personal_stats = _get_record_stats(personal_records)
 	public_stats = _get_record_stats(public_records)
 	achievements = _build_achievements(profile)
@@ -224,8 +224,6 @@ def _get_rating_leaderboard(limit=None):
 def _get_user_rating_place(user_id):
 	profile = UserProfile.objects.get(user_id=user_id)
 	rating_points = _normalize_profile_rating(profile)
-	if rating_points <= 0:
-		return 0, 0
 	return _get_dense_rank_position(rating_points), rating_points
 
 
@@ -422,7 +420,7 @@ def room_profile_card_view(request, username):
 	personal_records = PersonalRecordAttempt.objects.filter(user=target_user)
 	public_records = PublicRecordAttempt.objects.filter(user=target_user)
 	rating_points = _normalize_profile_rating(profile, personal_records, public_records)
-	rating_position = _get_dense_rank_position(rating_points) if rating_points > 0 else 0
+	rating_position = _get_dense_rank_position(rating_points)
 	
 	personal_stats = _get_record_stats(personal_records)
 	public_stats = _get_record_stats(public_records)
