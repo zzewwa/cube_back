@@ -122,14 +122,34 @@ def _build_achievements(profile):
 	return achievements
 
 
+def _normalize_profile_rating(profile, personal_records=None, public_records=None):
+	if personal_records is None:
+		personal_records = PersonalRecordAttempt.objects.filter(user=profile.user)
+	if public_records is None:
+		public_records = PublicRecordAttempt.objects.filter(user=profile.user)
+	if profile.rating_points == 1000 and profile.rating_position == 0 and not personal_records.exists() and not public_records.exists():
+		profile.rating_points = 0
+		profile.save(update_fields=['rating_points'])
+	return profile.rating_points
+
+
+def _get_dense_rank_position(rating_points):
+	higher_distinct_ratings = (
+		UserProfile.objects.filter(rating_points__gt=rating_points)
+		.values('rating_points')
+		.distinct()
+		.count()
+	)
+	return higher_distinct_ratings + 1
+
+
 def _build_profile_context(target_user, profile_form=None):
 	profile, _ = UserProfile.objects.get_or_create(user=target_user)
 	form = profile_form or ProfileUpdateForm(instance=profile, user=target_user)
 	personal_records = PersonalRecordAttempt.objects.filter(user=target_user)
 	public_records = PublicRecordAttempt.objects.filter(user=target_user)
-	if profile.rating_points == 1000 and profile.rating_position == 0 and not personal_records.exists() and not public_records.exists():
-		profile.rating_points = 0
-		profile.save(update_fields=['rating_points'])
+	rating_points = _normalize_profile_rating(profile, personal_records, public_records)
+	rating_position = _get_dense_rank_position(rating_points) if rating_points > 0 else 0
 	personal_stats = _get_record_stats(personal_records)
 	public_stats = _get_record_stats(public_records)
 	achievements = _build_achievements(profile)
@@ -141,15 +161,15 @@ def _build_profile_context(target_user, profile_form=None):
 		'profile_summary': {
 			'personal_best': personal_stats['best'],
 			'public_best': public_stats['best'],
-			'rating_position': profile.rating_position,
+			'rating_position': rating_position,
 		},
 		'profile_stats': {
 			'personal_best': personal_stats['best'],
 			'public_best': public_stats['best'],
 			'personal_attempts_total': personal_stats['total_attempts'],
 			'public_attempts_total': public_stats['total_attempts'],
-			'rating_points': profile.rating_points,
-			'rating_position': profile.rating_position,
+			'rating_points': rating_points,
+			'rating_position': rating_position,
 			'achievements_total': max(profile.achievements_total, earned_count),
 		},
 		'personal_record_history': _serialize_attempts(personal_records, limit=50, include_source=True),
@@ -182,14 +202,20 @@ def _get_rating_leaderboard(limit=None):
 		queryset = queryset[:limit]
 	profiles = list(queryset)
 	result = []
-	for index, profile in enumerate(profiles, start=1):
+	last_points = None
+	current_place = 0
+	for profile in profiles:
+		rating_points = _normalize_profile_rating(profile)
+		if rating_points != last_points:
+			current_place += 1
+			last_points = rating_points
 		result.append(
 			{
-				'position': index,
+				'position': current_place,
 				'username': profile.user.username,
 				'display_name': profile.visible_name,
 				'avatar_url': profile.avatar.url if profile.avatar else '',
-				'rating_points': profile.rating_points,
+				'rating_points': rating_points,
 			}
 		)
 	return result
@@ -197,8 +223,10 @@ def _get_rating_leaderboard(limit=None):
 
 def _get_user_rating_place(user_id):
 	profile = UserProfile.objects.get(user_id=user_id)
-	higher = UserProfile.objects.filter(rating_points__gt=profile.rating_points).count()
-	return higher + 1, profile.rating_points
+	rating_points = _normalize_profile_rating(profile)
+	if rating_points <= 0:
+		return 0, 0
+	return _get_dense_rank_position(rating_points), rating_points
 
 
 def _normalize_ranked_rating(value):
@@ -393,13 +421,8 @@ def room_profile_card_view(request, username):
 	profile = UserProfile.objects.get_or_create(user=target_user)[0]
 	personal_records = PersonalRecordAttempt.objects.filter(user=target_user)
 	public_records = PublicRecordAttempt.objects.filter(user=target_user)
-	
-	if profile.rating_points == 1000 and profile.rating_position == 0 and not personal_records.exists() and not public_records.exists():
-		rating_points = 0
-		rating_position = 0
-	else:
-		rating_points = profile.rating_points
-		rating_position = profile.rating_position
+	rating_points = _normalize_profile_rating(profile, personal_records, public_records)
+	rating_position = _get_dense_rank_position(rating_points) if rating_points > 0 else 0
 	
 	personal_stats = _get_record_stats(personal_records)
 	public_stats = _get_record_stats(public_records)
@@ -675,6 +698,24 @@ def ranked_queue_status_view(request):
 			'wait_seconds': wait_seconds,
 		}
 	)
+
+
+@login_required
+def ranked_queue_leave_view(request):
+	if request.method != 'POST':
+		return HttpResponseNotAllowed(['POST'])
+
+	entry = RankedMatchQueue.objects.filter(user=request.user).first()
+	if not entry:
+		waiting_count = RankedMatchQueue.objects.filter(status=RankedMatchQueue.QueueStatus.WAITING).count()
+		return JsonResponse({'ok': True, 'in_queue': False, 'waiting_count': waiting_count})
+
+	if entry.status == RankedMatchQueue.QueueStatus.MATCHED and entry.matched_room_id:
+		return JsonResponse({'ok': False, 'error': 'Матч уже найден'}, status=409)
+
+	entry.delete()
+	waiting_count = RankedMatchQueue.objects.filter(status=RankedMatchQueue.QueueStatus.WAITING).count()
+	return JsonResponse({'ok': True, 'in_queue': False, 'waiting_count': waiting_count})
 
 
 @login_required
