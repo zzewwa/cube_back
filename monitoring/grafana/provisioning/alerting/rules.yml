@@ -7,14 +7,14 @@ groups:
     interval: 30s
     rules:
       - uid: mycube_backend_down
-        title: MyCube Backend Down
+        title: MyCube Backend Down or No Data
         condition: B
         for: 1m
         noDataState: Alerting
         execErrState: Alerting
         annotations:
-          summary: MyCube backend metrics endpoint is down
-          description: Prometheus target job mycube_backend is not up for 1 minute.
+          summary: MyCube backend metrics endpoint is down or no data
+          description: Prometheus target job mycube_backend is not up/no data for 1 minute. Check logs in /opt/my_cube_split/backend_repo/logs/error.log and /opt/my_cube_split/backend_repo/logs/app.log.
         labels:
           severity: critical
         data:
@@ -41,6 +41,57 @@ groups:
                     params:
                       - 1
                     type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+              type: classic_conditions
+      - uid: mycube_backend_http_5xx
+        title: MyCube Backend Returns 5xx
+        condition: B
+        for: 30s
+        noDataState: NoData
+        execErrState: Alerting
+        annotations:
+          summary: MyCube backend has HTTP 5xx responses
+          description: 5xx responses detected in last 2 minutes. Check /opt/my_cube_split/backend_repo/logs/error.log and /opt/my_cube_split/backend_repo/logs/app.log for root cause.
+        labels:
+          severity: critical
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: mycube-prometheus
+            model:
+              editorMode: code
+              expr: increase(mycube_http_responses_total{status_class="5xx"}[2m])
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: true
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: gt
                   operator:
                     type: and
                   query:
