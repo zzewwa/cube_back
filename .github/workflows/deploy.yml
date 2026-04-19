@@ -76,6 +76,8 @@ jobs:
             FRONTEND_DIR="$APP_DIR/frontend_repo"
             BACKEND_REPO_URL="${{ secrets.BACKEND_REPO_URL }}"
             FRONTEND_REPO_URL="${{ secrets.FRONTEND_REPO_URL }}"
+            TELEGRAM_BOT_TOKEN="${{ secrets.TELEGRAM_BOT_TOKEN }}"
+            TELEGRAM_CHAT_ID="${{ secrets.TELEGRAM_CHAT_ID }}"
 
             if mkdir -p "$APP_DIR" >/dev/null 2>&1; then
               true
@@ -108,6 +110,11 @@ jobs:
             git pull --rebase --autostash origin "$(git rev-parse --abbrev-ref HEAD)"
 
             cd "$BACKEND_DIR"
+            cat > .env <<EOF
+            TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+            TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+            EOF
+
             if $DOCKER_CMD compose version >/dev/null 2>&1; then
               COMPOSE_CMD="$DOCKER_CMD compose"
             elif command -v docker-compose >/dev/null 2>&1; then
