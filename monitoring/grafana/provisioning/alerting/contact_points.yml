@@ -1,0 +1,11 @@
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: Email 7box77
+    receivers:
+      - uid: email-7box77
+        type: email
+        settings:
+          addresses: 7box77@gmail.com
+          singleEmail: true

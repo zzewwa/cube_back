@@ -30,10 +30,6 @@ services:
       POSTGRES_PORT: 5432
       HOST_IP: ${HOST_IP:-}
       METRICS_BEARER_TOKEN: ${METRICS_BEARER_TOKEN:-mycube-metrics-token-2026}
-      ALERTMANAGER_WEBHOOK_TOKEN: ${ALERTMANAGER_WEBHOOK_TOKEN:-mycube-alertmanager-webhook-token-2026}
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
-      TELEGRAM_PROXY_URL: ${TELEGRAM_PROXY_URL:-}
       DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,web,111.88.150.97,3dspeedcubing.ru,www.3dspeedcubing.ru
       DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost:8000,http://127.0.0.1:8000,http://3dspeedcubing.ru,http://www.3dspeedcubing.ru,https://3dspeedcubing.ru,https://www.3dspeedcubing.ru
     ports:
@@ -53,21 +49,8 @@ services:
       - "9090:9090"
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./monitoring/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
-
-  alertmanager:
-    image: prom/alertmanager:v0.27.0
-    restart: unless-stopped
-    depends_on:
-      - web
-    ports:
-      - "9093:9093"
-    volumes:
-      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-    command:
-      - "--config.file=/etc/alertmanager/alertmanager.yml"
 
   grafana:
     image: grafana/grafana:11.1.0
@@ -77,6 +60,13 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_SMTP_ENABLED: ${GRAFANA_SMTP_ENABLED:-true}
+      GF_SMTP_HOST: ${GRAFANA_SMTP_HOST:-smtp.gmail.com:587}
+      GF_SMTP_USER: ${GRAFANA_SMTP_USER:-}
+      GF_SMTP_PASSWORD: ${GRAFANA_SMTP_PASSWORD:-}
+      GF_SMTP_FROM_ADDRESS: ${GRAFANA_SMTP_FROM_ADDRESS:-7box77@gmail.com}
+      GF_SMTP_FROM_NAME: ${GRAFANA_SMTP_FROM_NAME:-MyCube Grafana}
+      GF_SMTP_STARTTLS_POLICY: ${GRAFANA_SMTP_STARTTLS_POLICY:-OpportunisticStartTLS}
     ports:
       - "3000:3000"
     volumes:
