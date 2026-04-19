@@ -42,12 +42,6 @@ CSRF_TRUSTED_ORIGINS = _unique(
 )
 
 METRICS_BEARER_TOKEN = os.getenv('METRICS_BEARER_TOKEN', 'mycube-metrics-token-2026')
-ALERTMANAGER_WEBHOOK_TOKEN = os.getenv('ALERTMANAGER_WEBHOOK_TOKEN', 'mycube-alertmanager-webhook-token-2026')
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
-TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '')
-TELEGRAM_PROXY_URL = os.getenv('TELEGRAM_PROXY_URL', '')
-ALERT_WEBHOOK_URL = os.getenv('ALERT_WEBHOOK_URL', '')
-ALERT_WEBHOOK_BEARER_TOKEN = os.getenv('ALERT_WEBHOOK_BEARER_TOKEN', '')
 
 
 # Application definition
