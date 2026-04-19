@@ -10,6 +10,7 @@ from PIL import Image, ImageOps
 
 from .models import UserProfile
 from .models import Room
+from .profanity import contains_profanity
 
 
 class LoginForm(AuthenticationForm):
@@ -81,6 +82,12 @@ class RegisterForm(UserCreationForm):
     class Meta(UserCreationForm.Meta):
         model = User
         fields = ('username',)
+
+    def clean_username(self):
+        username = (self.cleaned_data.get('username') or '').strip()
+        if contains_profanity(username):
+            raise ValidationError('Логин содержит недопустимые слова. Выберите другой логин.')
+        return username
 
     def clean_password1(self):
         password = self.cleaned_data['password1']
@@ -156,6 +163,9 @@ class ProfileUpdateForm(forms.ModelForm):
         display_name = (self.cleaned_data.get('display_name') or '').strip()
         if not display_name:
             return None
+
+        if contains_profanity(display_name):
+            raise ValidationError('Отображаемое имя содержит недопустимые слова. Выберите другое имя.')
 
         queryset = UserProfile.objects.filter(display_name__iexact=display_name)
         if self.instance.pk:
