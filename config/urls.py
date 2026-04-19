@@ -19,9 +19,11 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import include, path, re_path
 from django.views.static import serve
+from main.monitoring import metrics_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('metrics/', metrics_view),
     path('', include('main.urls')),
 ]
 
