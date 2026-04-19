@@ -6,10 +6,58 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
+from .forms import ProfileUpdateForm, RegisterForm
 from .models import PersonalRecordAttempt, PublicRecordAttempt, RankedMatchQueue, Room, RoomInvitation, RoomParticipant, UserProfile
 
 
 class UserProfileTests(TestCase):
+	def test_register_rejects_profane_username_in_latin(self):
+		form = RegisterForm(
+			data={
+				'username': 'govno_player',
+				'password1': 'Secret123A',
+				'password2': 'Secret123A',
+			}
+		)
+
+		self.assertFalse(form.is_valid())
+		self.assertIn('username', form.errors)
+		self.assertIn('Логин содержит недопустимые слова', form.errors['username'][0])
+
+	def test_register_rejects_profane_username_in_cyrillic(self):
+		form = RegisterForm(
+			data={
+				'username': 'говно_игрок',
+				'password1': 'Secret123A',
+				'password2': 'Secret123A',
+			}
+		)
+
+		self.assertFalse(form.is_valid())
+		self.assertIn('username', form.errors)
+		self.assertIn('Логин содержит недопустимые слова', form.errors['username'][0])
+
+	def test_profile_update_rejects_profane_display_name(self):
+		user = User.objects.create_user(username='clean_user', password='Secret123')
+		form = ProfileUpdateForm(
+			data={
+				'display_name': 'G0vn0 king',
+				'first_name': '',
+				'last_name': '',
+				'email': '',
+				'country': '',
+				'city': '',
+				'telegram': '',
+				'birth_date': '',
+			},
+			instance=user.profile,
+			user=user,
+		)
+
+		self.assertFalse(form.is_valid())
+		self.assertIn('display_name', form.errors)
+		self.assertIn('Отображаемое имя содержит недопустимые слова', form.errors['display_name'][0])
+
 	def test_profile_created_automatically_for_new_user(self):
 		user = User.objects.create_user(username='tester', password='Secret123')
 
