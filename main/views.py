@@ -511,22 +511,6 @@ def dashboard_view(request):
 
 
 @login_required
-def platform_stats_view(request):
-	if request.method != 'GET':
-		return HttpResponseNotAllowed(['GET'])
-
-	online_threshold = timezone.now() - timedelta(seconds=60)
-	return JsonResponse(
-		{
-			'online_users': UserPresence.objects.filter(last_seen__gte=online_threshold).count(),
-			'open_rooms': Room.objects.filter(status__in=(Room.Status.WAITING, Room.Status.RUNNING)).count(),
-			'total_users': User.objects.count(),
-			'timestamp': timezone.now().isoformat(),
-		}
-	)
-
-
-@login_required
 def profile_update_view(request):
 	if request.method != 'POST':
 		return HttpResponseNotAllowed(['POST'])
