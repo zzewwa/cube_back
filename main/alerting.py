@@ -75,6 +75,40 @@ def _send_telegram_message(text):
         return False
 
 
+def _send_webhook_message(text, payload):
+    webhook_url = (getattr(settings, 'ALERT_WEBHOOK_URL', '') or '').strip()
+    if not webhook_url:
+        return False
+
+    webhook_token = (getattr(settings, 'ALERT_WEBHOOK_BEARER_TOKEN', '') or '').strip()
+    body = {
+        'text': text,
+        'status': payload.get('status', 'unknown'),
+        'alerts': payload.get('alerts', []),
+    }
+
+    headers = {'Content-Type': 'application/json'}
+    if webhook_token:
+        headers['Authorization'] = f'Bearer {webhook_token}'
+
+    req = request.Request(
+        webhook_url,
+        data=json.dumps(body).encode('utf-8'),
+        headers=headers,
+        method='POST',
+    )
+
+    try:
+        with request.urlopen(req, timeout=10) as response:
+            status_ok = 200 <= response.status < 300
+            if not status_ok:
+                logger.error('Alert webhook failed with status %s', response.status)
+            return status_ok
+    except error.URLError:
+        logger.exception('Alert webhook request failed')
+        return False
+
+
 def _build_alert_text(payload):
     alerts = payload.get("alerts") or []
     if not alerts:
@@ -119,5 +153,6 @@ def alertmanager_webhook_view(request):
         return JsonResponse({"ok": False, "error": "bad payload"}, status=400)
 
     text = _build_alert_text(payload)
-    sent = _send_telegram_message(text)
-    return JsonResponse({"ok": sent})
+    telegram_sent = _send_telegram_message(text)
+    webhook_sent = _send_webhook_message(text, payload)
+    return JsonResponse({"ok": telegram_sent or webhook_sent, "telegram": telegram_sent, "webhook": webhook_sent})
