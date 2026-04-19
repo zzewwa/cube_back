@@ -678,6 +678,24 @@ def ranked_queue_status_view(request):
 
 
 @login_required
+def ranked_queue_leave_view(request):
+	if request.method != 'POST':
+		return HttpResponseNotAllowed(['POST'])
+
+	entry = RankedMatchQueue.objects.filter(user=request.user).first()
+	if not entry:
+		waiting_count = RankedMatchQueue.objects.filter(status=RankedMatchQueue.QueueStatus.WAITING).count()
+		return JsonResponse({'ok': True, 'in_queue': False, 'waiting_count': waiting_count})
+
+	if entry.status == RankedMatchQueue.QueueStatus.MATCHED and entry.matched_room_id:
+		return JsonResponse({'ok': False, 'error': 'Матч уже найден'}, status=409)
+
+	entry.delete()
+	waiting_count = RankedMatchQueue.objects.filter(status=RankedMatchQueue.QueueStatus.WAITING).count()
+	return JsonResponse({'ok': True, 'in_queue': False, 'waiting_count': waiting_count})
+
+
+@login_required
 def room_user_search_view(request):
 	query = (request.GET.get('q') or '').strip()
 	if len(query) < 2:
