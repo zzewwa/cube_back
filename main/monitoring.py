@@ -1,3 +1,5 @@
+import ipaddress
+
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.http import HttpResponse
@@ -49,6 +51,14 @@ def _internal_token_allowed(request):
     expected = f"Bearer {settings.METRICS_BEARER_TOKEN}"
     if auth_header == expected:
         return True
+
+    remote_addr = request.META.get("REMOTE_ADDR", "")
+    try:
+        if remote_addr and ipaddress.ip_address(remote_addr).is_private:
+            return True
+    except ValueError:
+        pass
+
     query_token = request.GET.get("token", "")
     return query_token == settings.METRICS_BEARER_TOKEN
 
