@@ -60,12 +60,12 @@ groups:
       - uid: mycube_backend_http_5xx
         title: MyCube Backend Returns 5xx
         condition: B
-        for: 30s
-        noDataState: NoData
+        for: 1m
+        noDataState: OK
         execErrState: Alerting
         annotations:
           summary: MyCube backend has HTTP 5xx responses
-          description: 5xx responses detected in last 2 minutes. Check /opt/my_cube_split/backend_repo/logs/error.log and /opt/my_cube_split/backend_repo/logs/app.log for root cause.
+          description: More than 3 HTTP 5xx responses detected in last 5 minutes. Check /opt/my_cube_split/backend_repo/logs/error.log and /opt/my_cube_split/backend_repo/logs/app.log for root cause.
         labels:
           severity: critical
         data:
@@ -76,7 +76,7 @@ groups:
             datasourceUid: mycube-prometheus
             model:
               editorMode: code
-              expr: increase(mycube_http_responses_total{status_class="5xx"}[2m])
+              expr: sum(increase(mycube_http_responses_total{status_class="5xx"}[5m])) or vector(0)
               intervalMs: 1000
               maxDataPoints: 43200
               range: true
@@ -90,7 +90,7 @@ groups:
               conditions:
                 - evaluator:
                     params:
-                      - 0
+                      - 3
                     type: gt
                   operator:
                     type: and

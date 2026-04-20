@@ -53,15 +53,57 @@ def _calculate_average_of_five(queryset):
 	return total / Decimal('5')
 
 
-def _serialize_attempts(queryset, limit=10, include_source=False):
-	return [
-		{
+def _is_valid_cube_state_payload(value):
+	if not isinstance(value, list) or len(value) != 27:
+		return False
+
+	allowed = {'r', 'o', 'g', 'b', 'w', 'y', 'h'}
+	for cubie_faces in value:
+		if not isinstance(cubie_faces, list) or len(cubie_faces) != 6:
+			return False
+		if any(str(face) not in allowed for face in cubie_faces):
+			return False
+	return True
+
+
+def _normalize_move_history(value):
+	if not isinstance(value, list):
+		return []
+
+	normalized = []
+	for token in value:
+		if not isinstance(token, str):
+			continue
+		item = token.strip()
+		if not item:
+			continue
+		normalized.append(item[:12])
+		if len(normalized) >= 5000:
+			break
+	return normalized
+
+
+def _serialize_attempts(queryset, limit=10, include_source=False, include_game_data=False):
+	result = []
+	for attempt in queryset[:limit]:
+		item = {
+			'id': attempt.id,
 			'time': _format_record(attempt.solve_time_seconds),
 			'datetime': _format_datetime(attempt.achieved_at),
 			**({'source': getattr(attempt, 'source', 'single')} if include_source else {}),
 		}
-		for attempt in queryset[:limit]
-	]
+		if include_game_data:
+			initial_state = attempt.initial_cube_state if isinstance(attempt.initial_cube_state, list) else []
+			move_history = _normalize_move_history(attempt.move_history)
+			item.update(
+				{
+					'initial_cube_state': initial_state,
+					'move_history': move_history,
+					'has_game_history': bool(initial_state and move_history),
+				}
+			)
+		result.append(item)
+	return result
 
 
 def _serialize_attempt_chart(queryset, limit=50):
@@ -173,7 +215,12 @@ def _build_profile_context(target_user, profile_form=None):
 			'rating_position': rating_position,
 			'achievements_total': max(profile.achievements_total, earned_count),
 		},
-		'personal_record_history': _serialize_attempts(personal_records, limit=50, include_source=True),
+		'personal_record_history': _serialize_attempts(
+			personal_records,
+			limit=50,
+			include_source=True,
+			include_game_data=True,
+		),
 		'public_record_history': _serialize_attempts(public_records),
 		'personal_attempt_chart': _serialize_attempt_chart(personal_records, limit=50),
 		'public_attempt_chart': _serialize_attempt_chart(public_records, limit=50),
@@ -1059,6 +1106,15 @@ def personal_record_attempt_create_view(request):
 		solve_time = Decimal(str(raw_value)).quantize(Decimal('0.01'))
 		if solve_time <= Decimal('0') or solve_time > Decimal('999.99'):
 			return JsonResponse({'error': 'solve_time_seconds must be between 0 and 999.99'}, status=400)
+
+		move_history = _normalize_move_history(payload.get('move_history'))
+		raw_initial_cube_state = payload.get('initial_cube_state')
+		if raw_initial_cube_state is None:
+			initial_cube_state = []
+		elif _is_valid_cube_state_payload(raw_initial_cube_state):
+			initial_cube_state = raw_initial_cube_state
+		else:
+			return JsonResponse({'error': 'initial_cube_state has invalid format'}, status=400)
 	except (json.JSONDecodeError, TypeError, ValueError, InvalidOperation):
 		return JsonResponse({'error': 'Invalid payload format'}, status=400)
 
@@ -1066,6 +1122,8 @@ def personal_record_attempt_create_view(request):
 		user=request.user,
 		solve_time_seconds=solve_time,
 		source=attempt_source,
+		initial_cube_state=initial_cube_state,
+		move_history=move_history,
 	)
 	return JsonResponse(
 		{
@@ -1074,6 +1132,7 @@ def personal_record_attempt_create_view(request):
 				'id': attempt.id,
 				'solve_time_seconds': f'{attempt.solve_time_seconds:.2f}',
 				'achieved_at': _format_datetime(attempt.achieved_at),
+				'move_count': len(move_history),
 			},
 		}
 	)

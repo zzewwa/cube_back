@@ -97,6 +97,8 @@ class PersonalRecordAttempt(BaseSolveAttempt):
 		choices=AttemptSource.choices,
 		default=AttemptSource.SINGLE,
 	)
+	initial_cube_state = models.JSONField('Начальное состояние куба', default=list, blank=True)
+	move_history = models.JSONField('История действий', default=list, blank=True)
 
 	class Meta(BaseSolveAttempt.Meta):
 		verbose_name = 'Личная попытка'
