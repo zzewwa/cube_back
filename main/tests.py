@@ -1,3 +1,4 @@
+import json
 from decimal import Decimal
 from datetime import date
 
@@ -183,6 +184,28 @@ class UserProfileTests(TestCase):
 		self.assertEqual(PersonalRecordAttempt.objects.filter(user=user).count(), 1)
 		attempt = PersonalRecordAttempt.objects.get(user=user)
 		self.assertEqual(attempt.solve_time_seconds, Decimal('14.37'))
+
+	def test_create_personal_record_attempt_with_game_history(self):
+		user = User.objects.create_user(username='timer_history', password='Secret123')
+		self.client.login(username='timer_history', password='Secret123')
+		initial_cube_state = [['h', 'h', 'h', 'h', 'h', 'h'] for _ in range(27)]
+		payload = {
+			'solve_time_seconds': '18.52',
+			'move_history': ['Q', '!D', '↑'],
+			'initial_cube_state': initial_cube_state,
+		}
+
+		response = self.client.post(
+			reverse('personal_record_attempt_create'),
+			data=json.dumps(payload),
+			content_type='application/json',
+		)
+
+		self.assertEqual(response.status_code, 200)
+		attempt = PersonalRecordAttempt.objects.get(user=user)
+		self.assertEqual(attempt.solve_time_seconds, Decimal('18.52'))
+		self.assertEqual(attempt.move_history, ['Q', '!D', '↑'])
+		self.assertEqual(attempt.initial_cube_state, initial_cube_state)
 
 	def test_create_personal_record_attempt_rejects_invalid_value(self):
 		user = User.objects.create_user(username='timer_bad', password='Secret123')
