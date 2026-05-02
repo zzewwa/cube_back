@@ -74,6 +74,7 @@ jobs:
             APP_DIR="/opt/my_cube_split"
             BACKEND_DIR="$APP_DIR/backend_repo"
             FRONTEND_DIR="$APP_DIR/frontend_repo"
+            RUNTIME_ENV_FILE="$BACKEND_DIR/.env.runtime"
             BACKEND_REPO_URL="${{ secrets.BACKEND_REPO_URL }}"
             FRONTEND_REPO_URL="${{ secrets.FRONTEND_REPO_URL }}"
             GRAFANA_SMTP_ENABLED="${{ secrets.GRAFANA_SMTP_ENABLED }}"
@@ -125,6 +126,11 @@ jobs:
             GRAFANA_SMTP_STARTTLS_POLICY=${GRAFANA_SMTP_STARTTLS_POLICY}
             EOF
 
+            if [ ! -f "$RUNTIME_ENV_FILE" ]; then
+              echo "Missing $RUNTIME_ENV_FILE on server. Create it once from .env.runtime.example before deploy."
+              exit 1
+            fi
+
             if $DOCKER_CMD compose version >/dev/null 2>&1; then
               COMPOSE_CMD="$DOCKER_CMD compose"
             elif command -v docker-compose >/dev/null 2>&1; then
@@ -138,5 +144,5 @@ jobs:
               exit 1
             fi
 
-            $COMPOSE_CMD down
-            $COMPOSE_CMD up -d --build
+            $COMPOSE_CMD --env-file "$RUNTIME_ENV_FILE" down
+            $COMPOSE_CMD --env-file "$RUNTIME_ENV_FILE" up -d --build

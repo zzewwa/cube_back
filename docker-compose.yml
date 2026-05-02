@@ -3,15 +3,13 @@ services:
     image: postgres:14
     restart: unless-stopped
     environment:
-      POSTGRES_DB: my_cube
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5433:5432"
+      POSTGRES_DB: ${POSTGRES_DB:-my_cube}
+      POSTGRES_USER: ${POSTGRES_SUPERUSER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERPASSWORD:-postgres}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d my_cube"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -23,9 +21,9 @@ services:
       db:
         condition: service_healthy
     environment:
-      POSTGRES_DB: my_cube
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-my_cube}
+      POSTGRES_USER: ${APP_POSTGRES_USER:-mycube_app}
+      POSTGRES_PASSWORD: ${APP_POSTGRES_PASSWORD:-change_me_now}
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
       HOST_IP: ${HOST_IP:-}
@@ -33,7 +31,7 @@ services:
       DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,web,111.88.150.97,3dspeedcubing.ru,www.3dspeedcubing.ru
       DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost:8000,http://127.0.0.1:8000,http://3dspeedcubing.ru,http://www.3dspeedcubing.ru,https://3dspeedcubing.ru,https://www.3dspeedcubing.ru
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./:/app
       - ../frontend_repo/templates/main:/app/main/templates/main:ro
@@ -46,7 +44,7 @@ services:
     depends_on:
       - web
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     command:
@@ -68,7 +66,7 @@ services:
       GF_SMTP_FROM_NAME: ${GRAFANA_SMTP_FROM_NAME:-MyCube Grafana}
       GF_SMTP_STARTTLS_POLICY: ${GRAFANA_SMTP_STARTTLS_POLICY:-OpportunisticStartTLS}
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
